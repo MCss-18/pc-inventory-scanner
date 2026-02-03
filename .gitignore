@@ -1,0 +1,55 @@
+# =========================
+# Python general
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+
+# =========================
+# Django (backend)
+# =========================
+backend/db.sqlite3
+backend/media/
+backend/staticfiles/
+backend/.env
+
+# Migraciones (opcional)
+backend/**/migrations/__pycache__/
+
+# =========================
+# PyInstaller (client)
+# =========================
+client/build/
+client/dist/
+client/*.spec
+
+# Archivos generados
+client/*.exe
+
+# =========================
+# Variables de entorno
+# =========================
+.env
+*.env
+
+# =========================
+# IDEs / SO
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+# =========================
+# Test / coverage
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/

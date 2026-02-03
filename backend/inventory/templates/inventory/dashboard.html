@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inventario TI - Tiempo Real</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-family: Arial;
+            font-size: 12px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        .muted {
+            color: #666;
+            font-size: 11px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 15px;
+            width: 70%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .close {
+            float: right;
+            font-size: 22px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Inventario de Equipos (en memoria)</h2>
+<a href="/download/json/" target="_blank">
+    <button>⬇ Descargar inventario (JSON)</button>
+</a>
+<table>
+    <thead>
+        <tr>
+            <th>Equipo</th>
+            <th>Usuario</th>
+            <th>Sistema</th>
+            <th>Hardware</th>
+            <th>Red</th>
+            <th>Auditoría</th>
+            <th>Seguridad</th>
+            <!-- <th>Software</th> -->
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in devices %}
+        <tr>
+            <!-- EQUIPO -->
+            <td>
+                <b>{{ d.hostname }}</b><br>
+                {{ d.device_type }}<br>
+                <span class="muted">{{ d.brand_model }}</span><br>
+                <span class="muted">Serial: {{ d.serial_number }}</span>
+            </td>
+
+            <!-- USUARIO -->
+            <td>{{ d.username }}</td>
+
+            <!-- SISTEMA -->
+            <td>
+                {{ d.os.name }}<br>
+                Build {{ d.os.build }} ({{ d.os.architecture }})<br>
+                CPU: {{ d.cpu.name }}<br>
+                GPU:
+                <ul>
+                    {% for g in d.gpu %}
+                        <li>{{ g }}</li>
+                    {% empty %}
+                        <li>No dedicada</li>
+                    {% endfor %}
+                </ul>
+            </td>
+
+            <!-- HARDWARE -->
+            <td>
+                <b>RAM:</b> {{ d.ram.total_gb }} GB<br>
+                <b>Discos:</b>
+                <ul>
+                    {% for disk in d.storage %}
+                        <li>{{ disk.model }} ({{ disk.size_gb }} GB)</li>
+                    {% endfor %}
+                </ul>
+
+                <b>Monitores:</b>
+                <ul>
+                    {% for m in d.monitors %}
+                        <li>{{ m.name }} ({{ m.resolution }})</li>
+                    {% endfor %}
+                </ul>
+            </td>
+
+            <!-- RED -->
+            <td>
+                <ul>
+                    {% for n in d.network %}
+                        <li>
+                            <b>{{ n.interface }}</b><br>
+                            MAC: {{ n.mac }}<br>
+                            IPs:
+                            <ul>
+                                {% for ip in n.ips %}
+                                    <li>{{ ip }}</li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <b>Unidades de red:</b>
+                <ul>
+                    {% for d in d.network_drives %}
+                        <li>
+                            {{ d.drive_letter }} → {{ d.remote_path }}
+                            {% if d.persistent %}
+                                <span class="muted">(persistente)</span>
+                            {% endif %}
+                        </li>
+                    {% empty %}
+                        <li class="muted">No detectadas</li>
+                    {% endfor %}
+                </ul>
+            </td>
+
+            <!-- AUDITORÍA -->
+            <td>
+                <b>Fecha UTC:</b> {{ d.audit.executed_at_utc }}<br>
+                <b>Fecha Perú:</b> {{ d.audit.executed_at_peru }}<br>
+                <b>IP:</b> {{ d.audit.ip }}<br>
+                <b>Agente:</b> v{{ d.audit.agent_version }}<br>
+
+                <b>Usuarios locales:</b>
+                    <ul>
+                        {% for u in d.users.local_users %}
+                            <li>{{ u }}</li>
+                        {% empty %}
+                            <li class="muted">No detectados</li>
+                        {% endfor %}
+                    </ul>
+
+                <b>Último usuario:</b> {{ d.users.last_logged_user }}<br>
+                <b>Último login:</b> {{ d.users.last_logon }}<br>
+
+                <span class="muted">
+                    Hash: {{ d.audit.device_hash }}
+                </span><br>
+                <a href="/download/device/{{ d.audit.device_hash }}/">
+                    ⬇ JSON
+                </a>
+            </td>
+            <td>
+                <b>BitLocker:</b>
+                {% if d.security.bitlocker %}Sí{% else %}No{% endif %}<br>
+
+                <b>Secure Boot:</b>
+                {% if d.security.secure_boot %}Sí{% else %}No{% endif %}<br>
+
+                <b>TPM:</b>
+                {% if d.security.tpm.present %}
+                    Sí (v{{ d.security.tpm.version }})
+                {% else %}
+                    No
+                {% endif %}<br>
+
+                <b>UAC:</b>
+                {% if d.security.uac_enabled %}Habilitado{% else %}Deshabilitado{% endif %}
+            </td>   
+            <!-- <td>
+                {{ d.software|length }} apps<br>
+                <button onclick="openSoftware('{{ forloop.counter0 }}')">
+                    Ver lista
+                </button>
+            </td> -->
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6">Aún no se ha recibido información</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% for d in devices %}
+<div id="software-{{ forloop.counter0 }}" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeSoftware('{{ forloop.counter0 }}')">&times;</span>
+        <h3>Software instalado - {{ d.hostname }}</h3>
+
+        <table>
+            <tr>
+                <th>Nombre</th>
+                <th>Versión</th>
+                <th>Proveedor</th>
+                <th>Instalación</th>
+                <th>Licencia</th>
+            </tr>
+            {% for s in d.software %}
+            <tr>
+                <td>{{ s.name }}</td>
+                <td>{{ s.version }}</td>
+                <td>{{ s.vendor }}</td>
+                <td>
+                    {{ s.install_date|default:"—" }}
+                </td>
+                <td>
+                    {% if s.licensed %}
+                        ✅ Original
+                    {% else %}
+                        ❌ Sin licencia
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3">No se detectó software</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endfor %}
+</body>
+<script>
+    function openSoftware(id) {
+        document.getElementById("software-" + id).style.display = "block";
+    }
+
+    function closeSoftware(id) {
+        document.getElementById("software-" + id).style.display = "none";
+    }
+</script>
+</html>
