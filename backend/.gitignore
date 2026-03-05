@@ -47,9 +47,6 @@ nosetests.xml
 # MyPy
 .mypy_cache/
 
-# Jupyter Notebooks
-.ipynb_checkpoints/
-
 # Celery
 celerybeat-schedule
 celerybeat.pid
